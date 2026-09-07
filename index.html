@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>amimono — Stitch Chart Viewer</title>
+<style>
+:root{--cell:18px;--line:#c9c9c9;--ink:#222;--paper:#fff;--muted:#666}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,BlinkMacSystemFont,"Hiragino Kaku Gothic ProN",Meiryo,sans-serif;color:var(--ink);background:#f5f5f3}
+header{padding:24px clamp(16px,4vw,48px);background:var(--paper);border-bottom:1px solid #ddd}h1{margin:0 0 6px;font-size:clamp(22px,4vw,34px)}p{margin:0;color:var(--muted)}
+main{padding:20px clamp(12px,3vw,40px) 48px;max-width:1400px;margin:auto}.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}.toolbar button{border:1px solid #bbb;background:white;border-radius:8px;padding:8px 12px;cursor:pointer}.toolbar button:hover{background:#eee}.meta{margin-left:auto;color:var(--muted);font-size:14px}
+.legend{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}.swatch{display:inline-flex;align-items:center;gap:5px;padding:5px 8px;background:white;border:1px solid #ddd;border-radius:7px;font-size:13px}.dot{width:18px;height:18px;border:1px solid #888;display:inline-block}.chart-wrap{overflow:auto;background:white;border:1px solid #ccc;border-radius:10px;padding:12px;box-shadow:0 2px 10px #0000000d}.chart{display:grid;grid-template-columns:34px repeat(35,var(--cell));grid-auto-rows:var(--cell);width:max-content}.cell{width:var(--cell);height:var(--cell);border-right:1px solid var(--line);border-bottom:1px solid var(--line);display:grid;place-items:center;font-size:9px;line-height:1;user-select:none}.head{background:#f0f0f0;font-size:8px;font-weight:600;color:#555}.rowhead{border-left:1px solid var(--line)}.cell[data-color="1"]{color:white}.cell[data-color="2"]{color:#555}.cell[data-color="3"],.cell[data-color="4"],.cell[data-color="7"]{color:#5b4b00}.cell[data-color="5"]{color:white}.cell[data-color="6"]{color:white}.cell:hover{outline:2px solid #222;outline-offset:-2px;z-index:2}.info{margin-top:16px;padding:14px;background:white;border:1px solid #ddd;border-radius:10px;font-size:14px}.hint{margin-top:8px;color:var(--muted)}
+@media print{body{background:white}header,.toolbar,.legend,.info{display:none}.chart-wrap{border:0;box-shadow:none;padding:0;overflow:visible}.chart{--cell:12px}.cell{font-size:6px}}
+</style>
+</head>
+<body>
+<header><h1>🧶 amimono</h1><p>画像から正規化した 35 × 53 の編み図 / pixel-grid viewer</p></header>
+<main>
+<div class="toolbar"><button id="minus">−</button><button id="plus">＋</button><button id="print">印刷</button><button id="toggle">番号表示</button><span class="meta" id="meta">loading…</span></div>
+<div class="legend" id="legend"></div>
+<div class="chart-wrap"><div class="chart" id="chart"></div></div>
+<div class="info"><b>データ:</b> <code>patterns/35x53-stitch-chart.json</code><div class="hint">行・列は左上を起点に 1-based。セルをクリックすると座標と色番号を表示します。</div><div id="selected" class="hint">セルを選択してください。</div></div>
+</main>
+<script>
+const $=s=>document.querySelector(s); let showNumbers=true, data;
+const chart=$('#chart');
+function render(){
+ chart.style.setProperty('--cell',getComputedStyle(document.documentElement).getPropertyValue('--cell'));
+ chart.innerHTML='';
+ const corner=document.createElement('div'); corner.className='cell head'; chart.append(corner);
+ for(let c=1;c<=data.width;c++){let e=document.createElement('div');e.className='cell head';e.textContent=c;chart.append(e)}
+ data.cells.forEach((row,r)=>{
+   let rh=document.createElement('div');rh.className='cell head rowhead';rh.textContent=r+1;chart.append(rh);
+   row.forEach((v,c)=>{let e=document.createElement('div');e.className='cell';e.dataset.color=v;e.style.background=data.palette[v].hex;e.textContent=showNumbers?v:'';e.title=`${r+1}段 × ${c+1}目 / 色${v}`;e.onclick=()=>$('#selected').textContent=`選択: ${r+1}段 × ${c+1}目 — 色番号 ${v} (${data.palette[v].name})`;chart.append(e)})
+ });
+ $('#meta').textContent=`${data.width}目 × ${data.height}段 / ${data.stats.colored_cells} cells`;
+}
+function step(n){let root=getComputedStyle(document.documentElement),cur=parseFloat(root.getPropertyValue('--cell'));document.documentElement.style.setProperty('--cell',Math.max(8,Math.min(36,cur+n))+'px');render()}
+fetch('patterns/35x53-stitch-chart.json').then(r=>r.json()).then(d=>{data=d;let l=$('#legend');Object.entries(d.palette).forEach(([k,p])=>{let e=document.createElement('span');e.className='swatch';e.innerHTML=`<i class="dot" style="background:${p.hex}"></i>${k}: ${p.name}`;l.append(e)});render()});
+$('#plus').onclick=()=>step(2);$('#minus').onclick=()=>step(-2);$('#print').onclick=()=>window.print();$('#toggle').onclick=()=>{showNumbers=!showNumbers;render()};
+</script>
+</body>
+</html>
