@@ -2,17 +2,40 @@
 
 Machine-knitting / 編み図を、**pixel art → pixel grid → stitch pattern → machine IR**へ変換するためのドメイン実装。
 
+## Go API
+
+標準ライブラリ中心のGo APIで、編み図画像をセル単位の `pixel-grid/v1` JSONへ変換できます。
+
+```bash
+go run ./cmd/amimono-api
+```
+
+### Endpoints
+
+- `GET /healthz` — ヘルスチェック
+- `GET /v1/palette` — 現在の7色パレット
+- `GET /v1/pattern` — リポジトリ内の35×53サンプルJSON
+- `POST /v1/convert?width=35&height=53` — PNG/JPEG画像をセル分割してJSON化
+
+画像変換は `multipart/form-data` の `image` フィールド、または画像バイナリの直接POSTに対応します。
+
+```bash
+curl -X POST \
+  -F image=@IMG_2325.png \
+  'http://localhost:8080/v1/convert?width=35&height=53'
+```
+
+中央60%をサンプリングしてグリッド線の影響を抑え、パレット最近傍色から1〜7の色番号へ変換します。
+
 ## 今回追加したもの
 
 添付された35×53マスの編み図画像をセル単位で読み取り、`pixel-grid/v1` JSONとして正規化しました。
 
 - `patterns/35x53-stitch-chart.json` — 35目 × 53段のセルデータ
 - `index.html` — ブラウザで確認できるインタラクティブ編み図ビューア
-- 行・列番号表示
-- 色番号表示 / 非表示
-- 拡大・縮小
-- セル選択で「段 × 目」と色番号を確認
-- 印刷用レイアウト
+- `cmd/amimono-api/main.go` — Go画像セグメントAPI
+- `go.mod` — Go module
+- `Dockerfile` — distrolessコンテナ
 
 ## データモデル
 
@@ -50,7 +73,7 @@ simulation / production_data
 
 ## 次のステップ
 
-1. 画像セグメント解析をCLI化
+1. 画像セグメント解析の精度評価・自動トリミング
 2. OCRではなくセル背景色＋凡例から色番号を推定
 3. JSON Schemaを固定
 4. stitch patternへの変換
