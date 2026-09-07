@@ -1,0 +1,30 @@
+schema: amimono/pattern-target/v1
+name: sock-one-point
+source: pixel-grid
+
+target:
+  product: socks
+  placement: one_point
+  input: pixel_grid
+  output: machine_ir
+
+constraints:
+  preserve_aspect_ratio: true
+  max_colors: 8
+  background: transparent
+  allow_anti_aliasing: false
+  center: true
+
+pipeline:
+  - pixel_grid
+  - normalize_palette
+  - crop_background
+  - fit_one_point
+  - stitch_grid
+  - machine_ir
+  - machine_adapter
+
+notes:
+  - PixelGrid is the reusable source representation.
+  - Sock-specific dimensions belong to the target profile, not the source artwork.
+  - The same PixelGrid can be routed to embroidery, knitting, perler beads, or other textile outputs.
