@@ -1,0 +1,289 @@
+api_version: "v1"
+id: amimono
+name: Machine Knitting Ontology
+version: "0.1"
+description: >
+  Ontology for transforming pixel art and garment intent into machine-knitting
+  production data for sweaters.
+
+principles:
+  source: pixel_art_or_design_intent
+  semantic_unit: stitch_and_garment_structure
+  worktype: object2object
+  intermediate_representation: machine_ir
+  production_boundary: machine_specific_adapter
+  evidence: simulation_and_production_result
+
+worktype:
+  id: pixel_art2machine_sweater
+  from: pixel_art
+  to: production_data
+  operation: transform
+  stages:
+    - pixel_grid
+    - garment_spec
+    - stitch_pattern
+    - panel_pattern
+    - machine_ir
+    - machine_output
+    - simulation
+    - production_data
+
+objects:
+  pixel_art:
+    kind: source_design
+    formats: [png, svg, json]
+    attributes: [width, height, palette, pixels]
+
+  pixel_grid:
+    kind: normalized_design
+    attributes: [width, height, cells, colors, gauge_ratio]
+
+  garment_spec:
+    kind: garment_definition
+    attributes:
+      - garment_type
+      - size
+      - chest_width
+      - body_length
+      - sleeve_length
+      - shoulder_width
+      - neck_width
+      - gauge
+      - yarn
+      - machine_class
+
+  stitch_pattern:
+    kind: stitch_program
+    operations: [knit, tuck, slip, fair_isle, jacquard, intarsia]
+    attributes: [rows, stitches, colors, yarn_mapping]
+
+  panel_pattern:
+    kind: garment_panel
+    panels: [front, back, sleeve_left, sleeve_right, collar]
+    attributes: [width, height, shaping, decreases, increases, bind_off]
+
+  machine_ir:
+    kind: machine_independent_representation
+    attributes:
+      - gauge
+      - yarn
+      - carrier
+      - needle_range
+      - row_count
+      - stitch_operations
+      - color_changes
+      - shaping
+    principle: >
+      Keep garment intent and knitting logic independent from a specific
+      knitting machine protocol.
+
+  machine_output:
+    kind: machine_specific_data
+    formats: [knitout, machine_pattern, punchcard, vendor_specific]
+    attributes: [machine_model, needle_bed, carriage, carrier, instructions]
+
+  simulation:
+    kind: validation_artifact
+    attributes: [knit_preview, errors, warnings, tension_check]
+
+  production_data:
+    kind: manufacturing_package
+    attributes:
+      - machine_model
+      - yarn
+      - stitch_count
+      - row_count
+      - piece_list
+      - machine_settings
+      - assembly_instructions
+      - quality_checks
+
+relations:
+  derives: [pixel_grid, pixel_art]
+  parameterizes: [garment_spec, pixel_grid]
+  encodes: [stitch_pattern, pixel_grid]
+  composes: [panel_pattern, garment_spec]
+  represents: [machine_ir, stitch_pattern]
+  compiles: [machine_output, machine_ir]
+  validates: [simulation, machine_output]
+  produces: [production_data, machine_output]
+  evidenced_by: [production_data, simulation]
+
+transformations:
+  - id: pixel_art2pixel_grid
+    from: pixel_art
+    to: pixel_grid
+    method: normalize_resolution_and_palette
+  - id: pixel_grid2stitch_pattern
+    from: pixel_grid
+    to: stitch_pattern
+    method: map_pixels_to_stitches_and_colors
+  - id: garment_spec2panel_pattern
+    from: garment_spec
+    to: panel_pattern
+    method: generate_shaped_panels
+  - id: stitch_pattern2machine_ir
+    from: stitch_pattern
+    to: machine_ir
+    method: compile_to_machine_independent_ir
+  - id: panel_pattern2machine_ir
+    from: panel_pattern
+    to: machine_ir
+    method: encode_shaping_and_piece_structure
+  - id: machine_ir2machine_output
+    from: machine_ir
+    to: machine_output
+    method: adapter_compile
+  - id: machine_output2simulation
+    from: machine_output
+    to: simulation
+    method: simulate_and_validate
+  - id: machine_output2production_data
+    from: machine_output
+    to: production_data
+    method: package_manufacturing_instructions
+
+machine:
+  abstraction:
+    classes:
+      - domestic_flatbed
+      - industrial_flatbed
+      - computerized_flatbed
+  adapter:
+    principle: one_machine_one_adapter
+    input: machine_ir
+    output: machine_output
+
+color_model:
+  input: pixel_palette
+  mapping:
+    type: yarn_color
+    constraints:
+      - machine_color_limit
+      - yarn_availability
+      - contrast
+  output: yarn_mapping
+
+gauge_model:
+  inputs: [stitches_per_10cm, rows_per_10cm, yarn, machine]
+  outputs: [stitch_width, row_height, finished_size]
+  principle: >
+    Pixel geometry must be corrected for the physical stitch aspect ratio;
+    one image pixel is not assumed to be one square physical stitch.
+
+sizing:
+  inputs: [body_measurements, ease, gauge]
+  outputs: [stitch_width, row_count, shaping]
+  measurements:
+    - chest
+    - body_length
+    - shoulder
+    - sleeve_length
+    - armhole
+    - neck
+
+validation:
+  levels:
+    - schema
+    - geometry
+    - gauge
+    - stitch_program
+    - machine_compatibility
+    - simulation
+    - physical_sample
+  evidence:
+    - generated_file
+    - simulation_result
+    - swatch_result
+    - sample_garment
+    - production_result
+
+providers:
+  external_tools:
+    - KnitScape
+    - silver-reed-write
+    - punchcard-digitizer
+    - parametric-sweater
+    - knitting_pattern
+    - KnitBird
+    - Stitch Fiddle
+    - OpenKnit
+  role: adapter_or_reference_implementation
+
+interfaces:
+  input:
+    - png
+    - svg
+    - json
+  internal:
+    - pixel_grid
+    - garment_spec
+    - stitch_pattern
+    - panel_pattern
+    - machine_ir
+  output:
+    - knitout
+    - machine_pattern
+    - production_data
+
+repos:
+  bonsai/amimono:
+    role: machine_knitting_domain
+  bonsai/textile:
+    role: textile_and_production_ir
+  bonsai/oem:
+    role: manufacturing_provider_registry
+  bonsai/aw:
+    role: routing_generation_and_execution
+  bonsai/ecosystem:
+    role: domain_declaration
+
+synapses:
+  - from: pixel_art
+    to: pixel_grid
+    relation: normalized_into
+  - from: pixel_grid
+    to: stitch_pattern
+    relation: translated_into
+  - from: garment_spec
+    to: panel_pattern
+    relation: parameterizes
+  - from: stitch_pattern
+    to: machine_ir
+    relation: compiled_into
+  - from: panel_pattern
+    to: machine_ir
+    relation: encoded_into
+  - from: machine_ir
+    to: machine_output
+    relation: adapted_to
+  - from: machine_output
+    to: production_data
+    relation: generates
+  - from: production_data
+    to: evidence
+    relation: produces
+
+mvp:
+  scope:
+    machine_count: 1
+    yarn_count: 1
+    size_count: 1
+    palette_size: 2-4
+  pipeline: pixel_art -> pixel_grid -> garment_spec -> panel_pattern -> machine_ir -> machine_output
+  acceptance: >
+    A small pixel-art motif can be converted into a reproducible sweater
+    production package for one supported machine without hand-editing the
+    intermediate representation.
+
+aw:
+  worktype: pixel_art2machine_sweater
+  task_instances:
+    - pixel_art2pixel_grid
+    - pixel_grid2stitch_pattern
+    - garment_spec2panel_pattern
+    - stitch_pattern2machine_ir
+    - machine_ir2machine_output
+    - machine_output2simulation
+    - machine_output2production_data
